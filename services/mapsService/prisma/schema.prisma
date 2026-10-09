@@ -1,0 +1,49 @@
+// Proveedor de mapas SIMULADO: catálogo de lugares de Morelia, zonas y
+// perfiles de tráfico por hora. Reemplaza la API de Google Maps (sin costo).
+generator client {
+  provider = "prisma-client-js"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("MAPS_DATABASE_URL")
+}
+
+model Zona {
+  id             String  @id
+  nombre         String
+  color          String
+  centroLat      Float
+  centroLng      Float
+  radioKm        Float
+  /// Tortuosidad de calles: km reales por km en línea recta.
+  tortuosidad    Float   @default(1.3)
+  /// 24 valores 0..1 = congestión por hora del día.
+  perfilTrafico  Float[]
+  lugares        Lugar[]
+}
+
+model Lugar {
+  id        String  @id @default(uuid())
+  nombre    String
+  tipo      String
+  direccion String
+  colonia   String
+  cp        String
+  lat       Float
+  lng       Float
+  zonaId    String
+  zona      Zona    @relation(fields: [zonaId], references: [id])
+
+  @@index([nombre])
+}
+
+/// Simulador de fallas: permite "tumbar" el proveedor de mapas desde el panel.
+model ChaosConfig {
+  id         String   @id
+  caido      Boolean  @default(false)
+  tasaFallo  Float    @default(0)
+  latenciaMs Int      @default(0)
+  updatedAt  DateTime @updatedAt
+}

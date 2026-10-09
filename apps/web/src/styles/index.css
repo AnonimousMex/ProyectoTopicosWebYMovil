@@ -1,0 +1,82 @@
+@import 'tailwindcss';
+@import 'leaflet/dist/leaflet.css';
+
+/* Paleta de Rumbo: tinta profunda + naranja "ruta" + índigo. */
+@theme {
+  --font-sans: 'Plus Jakarta Sans', ui-sans-serif, system-ui, sans-serif;
+  --font-mono: 'JetBrains Mono', ui-monospace, monospace;
+
+  --color-ink-950: #070b16;
+  --color-ink-900: #0b1020;
+  --color-ink-800: #141b31;
+  --color-ink-700: #1e2742;
+  --color-ink-600: #2b3657;
+
+  --color-brand-50: #fff3ed;
+  --color-brand-100: #ffe3d4;
+  --color-brand-200: #ffc4a8;
+  --color-brand-400: #ff7f4d;
+  --color-brand-500: #ff5a1f;
+  --color-brand-600: #ea4210;
+  --color-brand-700: #c2320c;
+
+  --color-accent-50: #eef2ff;
+  --color-accent-100: #e0e7ff;
+  --color-accent-500: #6366f1;
+  --color-accent-600: #4f46e5;
+
+  --color-surface: #f4f6fb;
+
+  --shadow-card: 0 1px 2px rgb(15 23 42 / 0.04), 0 8px 24px -12px rgb(15 23 42 / 0.12);
+  --shadow-pop: 0 20px 50px -20px rgb(15 23 42 / 0.35);
+
+  --animate-pulse-ring: pulse-ring 1.8s cubic-bezier(0.2, 0.6, 0.4, 1) infinite;
+  --animate-fade-up: fade-up 0.35s ease-out both;
+
+  @keyframes pulse-ring {
+    0% { transform: scale(0.6); opacity: 0.8; }
+    100% { transform: scale(2.2); opacity: 0; }
+  }
+  @keyframes fade-up {
+    from { opacity: 0; transform: translateY(6px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+}
+
+html, body, #root {
+  height: 100%;
+}
+
+body {
+  @apply bg-surface text-slate-800 antialiased;
+  font-feature-settings: 'cv11', 'ss01';
+}
+
+::selection {
+  @apply bg-brand-200 text-ink-900;
+}
+
+.leaflet-container {
+  font-family: var(--font-sans);
+  border-radius: inherit;
+  background: #e8ecf3;
+}
+
+.leaflet-div-icon.rumbo-marker {
+  background: transparent;
+  border: none;
+}
+
+.scrollbar-thin::-webkit-scrollbar { width: 6px; height: 6px; }
+.scrollbar-thin::-webkit-scrollbar-thumb { background: rgb(148 163 184 / 0.5); border-radius: 999px; }
+
+/* Usado por los marcadores de Leaflet (HTML inyectado, fuera de Tailwind). */
+@keyframes pulse-ring {
+  0% { transform: scale(0.6); opacity: 0.8; }
+  100% { transform: scale(2.2); opacity: 0; }
+}
+
+/* Teselas OSM un poco desaturadas para que destaquen rutas y marcadores. */
+.leaflet-tile-pane {
+  filter: saturate(0.7) contrast(0.95) brightness(1.03);
+}

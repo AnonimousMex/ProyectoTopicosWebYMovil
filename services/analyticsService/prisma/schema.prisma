@@ -1,0 +1,73 @@
+// Estadísticas y bitácora: modelo de lectura alimentado por eventos.
+generator client {
+  provider = "prisma-client-js"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("ANALYTICS_DATABASE_URL")
+}
+
+/// Todos los eventos de dominio que pasaron por el bus.
+model EventLog {
+  id         String   @id
+  type       String
+  source     String
+  folio      String?
+  payload    Json
+  occurredAt DateTime
+
+  @@index([occurredAt])
+  @@index([type, occurredAt])
+}
+
+/// Hecho por pedido, actualizado con cada evento (para KPIs rápidos).
+model OrderFact {
+  orderId        String    @id
+  folio          String    @unique
+  clienteId      String
+  status         String
+  medioId        String?
+  urgencia       String
+  total          Float
+  distanciaKm    Float
+  fechaLimite    DateTime
+  createdAt      DateTime
+  paidAt         DateTime?
+  assignedAt     DateTime?
+  deliveredAt    DateTime?
+  aTiempo        Boolean?
+  minutosEntrega Float?
+  updatedAt      DateTime  @updatedAt
+
+  @@index([createdAt])
+  @@index([status])
+}
+
+/// Bitácora de accesos (la escribe el gateway, una sola vez para todo el sistema).
+model AuditLog {
+  id         String   @id @default(uuid())
+  requestId  String
+  userId     String?
+  rol        String?
+  metodo     String
+  ruta       String
+  status     Int
+  ip         String?
+  userAgent  String?
+  duracionMs Int
+  createdAt  DateTime @default(now())
+
+  @@index([createdAt])
+  @@index([userId, createdAt])
+}
+
+model OptimizationFact {
+  runId      String   @id
+  tipo       String
+  asignados  Int
+  costoTotal Float
+  mejoraPct  Float
+  createdAt  DateTime @default(now())
+}

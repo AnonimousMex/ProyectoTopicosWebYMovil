@@ -1,0 +1,66 @@
+generator client {
+  provider = "prisma-client-js"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("NOTIFICATIONS_DATABASE_URL")
+}
+
+enum Audience {
+  USUARIO
+  ADMINS
+}
+
+enum EmailStatus {
+  PENDIENTE
+  ENVIADO
+  FALLIDO
+}
+
+/// Notificación dentro de la app (campana).
+model Notification {
+  id         String    @id @default(uuid())
+  audience   Audience  @default(USUARIO)
+  userId     String?
+  titulo     String
+  mensaje    String
+  tipo       String
+  folio      String?
+  leida      Boolean   @default(false)
+  createdAt  DateTime  @default(now())
+
+  @@index([userId, leida, createdAt])
+  @@index([audience, createdAt])
+}
+
+/// Bitácora y cola de correos: si el envío falla se reintenta sin afectar al pedido.
+model EmailLog {
+  id          String      @id @default(uuid())
+  to          String
+  subject     String
+  template    String
+  data        Json
+  status      EmailStatus @default(PENDIENTE)
+  attempts    Int         @default(0)
+  lastError   String?
+  nextRetryAt DateTime?
+  sentAt      DateTime?
+  driver      String?
+  eventId     String?
+  folio       String?
+  createdAt   DateTime    @default(now())
+
+  @@index([status, nextRetryAt])
+  @@index([createdAt])
+}
+
+/// Idempotencia de consumidores: un evento se procesa una sola vez.
+model ProcessedEvent {
+  eventId     String
+  consumer    String
+  processedAt DateTime @default(now())
+
+  @@id([eventId, consumer])
+}

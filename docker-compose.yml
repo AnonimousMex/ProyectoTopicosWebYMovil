@@ -1,0 +1,39 @@
+# Infraestructura local de Rumbo: una instancia de Postgres con una base por
+# microservicio (database-per-service) y Redis como bus de eventos (Streams)
+# y canal de tiempo real (Pub/Sub).
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: rumbo_postgres
+    environment:
+      POSTGRES_USER: rumbo
+      POSTGRES_PASSWORD: rumbo_local_2026
+      POSTGRES_DB: rumbo
+    ports:
+      - "5440:5432"
+    volumes:
+      - rumbo_pgdata:/var/lib/postgresql/data
+      - ./infra/postgres/initDatabases.sql:/docker-entrypoint-initdb.d/01-initDatabases.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U rumbo"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  redis:
+    image: redis:7-alpine
+    container_name: rumbo_redis
+    command: ["redis-server", "--appendonly", "yes"]
+    ports:
+      - "6390:6379"
+    volumes:
+      - rumbo_redisdata:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+volumes:
+  rumbo_pgdata:
+  rumbo_redisdata:

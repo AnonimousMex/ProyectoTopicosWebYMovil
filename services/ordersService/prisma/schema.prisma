@@ -1,0 +1,128 @@
+// Servicio de pedidos: la fuente de verdad del pedido y su ciclo de vida.
+generator client {
+  provider = "prisma-client-js"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("ORDERS_DATABASE_URL")
+}
+
+enum OrderStatus {
+  PENDIENTE_PAGO
+  PAGADO
+  ASIGNADO
+  RECOLECTADO
+  EN_CAMINO
+  ENTREGADO
+  CANCELADO
+  FALLIDO
+}
+
+model Order {
+  id                  String      @id @default(uuid())
+  folio               String      @unique
+  idempotencyKey      String?     @unique
+  clienteId           String
+  clienteNombre       String
+  clienteEmail        String
+  status              OrderStatus @default(PENDIENTE_PAGO)
+
+  origenDireccion     String
+  origenLat           Float
+  origenLng           Float
+  origenLugarId       String?
+  destinoDireccion    String
+  destinoLat          Float
+  destinoLng          Float
+  destinoLugarId      String?
+  destinatarioNombre  String
+  destinatarioTelefono String?
+
+  pesoKg              Float
+  largoCm             Float
+  anchoCm             Float
+  altoCm              Float
+  volumenL            Float
+  fragil              Boolean     @default(false)
+  urgencia            String
+  fechaLimite         DateTime
+  extras              String[]
+  valorDeclarado      Float       @default(0)
+  notas               String?
+
+  medioPreferido      String?
+  medioId             String?
+  repartidorId        String?
+  repartidorNombre    String?
+  sugerenciaMedio     String?
+  sugerenciaMotivo    String?
+  sugerenciaProveedor String?
+  sugerenciaConfianza Float?
+
+  distanciaKm         Float
+  minutosEstimados    Float
+  etaMinutos          Float?
+  /// Polilínea guardada al cotizar: el seguimiento se pinta sin llamar al mapa.
+  polilinea           Json?
+  rutaEstimada        Boolean     @default(false)
+  precio              Json
+  total               Float
+
+  createdAt           DateTime    @default(now())
+  updatedAt           DateTime    @updatedAt
+  paidAt              DateTime?
+  assignedAt          DateTime?
+  pickedUpAt          DateTime?
+  inTransitAt         DateTime?
+  deliveredAt         DateTime?
+  closedAt            DateTime?
+
+  history             OrderStatusHistory[]
+
+  @@index([clienteId, createdAt])
+  @@index([status, createdAt])
+  @@index([repartidorId, status])
+}
+
+model OrderStatusHistory {
+  id        String       @id @default(uuid())
+  orderId   String
+  from      OrderStatus?
+  to        OrderStatus
+  actorId   String
+  actorRol  String
+  motivo    String?
+  createdAt DateTime     @default(now())
+
+  order     Order        @relation(fields: [orderId], references: [id], onDelete: Cascade)
+
+  @@index([orderId, createdAt])
+}
+
+model FolioCounter {
+  year Int @id
+  last Int @default(0)
+}
+
+model OutboxEvent {
+  id            String    @id @default(uuid())
+  type          String
+  payload       Json
+  correlationId String?
+  createdAt     DateTime  @default(now())
+  publishedAt   DateTime?
+  attempts      Int       @default(0)
+  lastError     String?
+
+  @@index([publishedAt, createdAt])
+}
+
+model ProcessedEvent {
+  eventId     String
+  consumer    String
+  processedAt DateTime @default(now())
+
+  @@id([eventId, consumer])
+}

@@ -1,0 +1,85 @@
+// Base propia del servicio de identidad: nadie más lee estas tablas.
+generator client {
+  provider = "prisma-client-js"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("AUTH_DATABASE_URL")
+}
+
+enum Role {
+  CLIENTE
+  REPARTIDOR
+  ADMIN
+}
+
+enum CodePurpose {
+  VERIFICAR_CORREO
+  RESTABLECER_CONTRASENA
+}
+
+model User {
+  id               String    @id @default(uuid())
+  email            String    @unique
+  name             String
+  phone            String?
+  passwordHash     String
+  role             Role      @default(CLIENTE)
+  emailVerified    Boolean   @default(false)
+  active           Boolean   @default(true)
+  failedLogins     Int       @default(0)
+  lockedUntil      DateTime?
+  lastLoginAt      DateTime?
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+
+  refreshTokens    RefreshToken[]
+  codes            VerificationCode[]
+}
+
+model RefreshToken {
+  id         String    @id @default(uuid())
+  userId     String
+  tokenHash  String    @unique
+  familyId   String
+  expiresAt  DateTime
+  revokedAt  DateTime?
+  createdAt  DateTime  @default(now())
+  userAgent  String?
+  ip         String?
+
+  user       User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([familyId])
+}
+
+model VerificationCode {
+  id         String      @id @default(uuid())
+  userId     String
+  purpose    CodePurpose
+  codeHash   String
+  expiresAt  DateTime
+  usedAt     DateTime?
+  attempts   Int         @default(0)
+  createdAt  DateTime    @default(now())
+
+  user       User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, purpose])
+}
+
+model OutboxEvent {
+  id            String    @id @default(uuid())
+  type          String
+  payload       Json
+  correlationId String?
+  createdAt     DateTime  @default(now())
+  publishedAt   DateTime?
+  attempts      Int       @default(0)
+  lastError     String?
+
+  @@index([publishedAt, createdAt])
+}

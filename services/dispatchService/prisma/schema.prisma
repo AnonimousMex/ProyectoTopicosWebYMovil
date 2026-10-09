@@ -1,0 +1,176 @@
+// Servicio de despacho: medios, tarifas, flota, pool de envíos, IA y
+// corridas del algoritmo genético.
+generator client {
+  provider = "prisma-client-js"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DISPATCH_DATABASE_URL")
+}
+
+/// Parámetros de cada medio. Costos y tiempos cambian aquí, sin tocar código.
+model Medio {
+  id                  String   @id
+  nombre              String
+  descripcion         String
+  icono               String
+  color               String
+  activo              Boolean  @default(true)
+  orden               Int      @default(0)
+  velocidadKmh        Float
+  /// 0 = el tráfico no le afecta, 1 = le afecta por completo.
+  sensibilidadTrafico Float
+  costoBase           Float
+  costoPorKm          Float
+  costoPorKg          Float
+  /// Costo interno por km para la empresa (lo minimiza el algoritmo genético).
+  costoOperativoKm    Float
+  pesoMaxKg           Float
+  volumenMaxL         Float
+  distanciaMaxKm      Float
+  capacidadPaquetes   Int
+  emisionesGCO2Km     Float
+  updatedAt           DateTime @updatedAt
+
+  repartidores        Repartidor[]
+}
+
+model Extra {
+  id          String  @id
+  nombre      String
+  descripcion String
+  /// PORCENTAJE_VALOR (sobre valor declarado) | PORCENTAJE_TOTAL | FIJO
+  tipo        String
+  valor       Float
+  minimo      Float   @default(0)
+  activo      Boolean @default(true)
+  orden       Int     @default(0)
+}
+
+model Repartidor {
+  id                  String   @id
+  nombre              String
+  email               String
+  medioId             String
+  activo              Boolean  @default(true)
+  disponible          Boolean  @default(false)
+  baseNombre          String
+  baseLat             Float
+  baseLng             Float
+  calificacion        Float    @default(4.8)
+  entregasCompletadas Int      @default(0)
+  updatedAt           DateTime @updatedAt
+
+  medio               Medio    @relation(fields: [medioId], references: [id])
+}
+
+enum EnvioStatus {
+  EN_POOL
+  ASIGNADO
+  EN_RUTA
+  COMPLETADO
+  CANCELADO
+}
+
+model Envio {
+  id                  String      @id @default(uuid())
+  orderId             String      @unique
+  folio               String      @unique
+  clienteId           String
+  origenDireccion     String
+  origenLat           Float
+  origenLng           Float
+  destinoDireccion    String
+  destinoLat          Float
+  destinoLng          Float
+  pesoKg              Float
+  volumenL            Float
+  fragil              Boolean     @default(false)
+  urgencia            String
+  fechaLimite         DateTime
+  medioPreferido      String?
+  extras              String[]
+  status              EnvioStatus @default(EN_POOL)
+  repartidorId        String?
+  medioId             String?
+  secuencia           Int?
+  etaMinutos          Float?
+  costoOperativo      Float?
+  runId               String?
+  sugerenciaMedio     String?
+  sugerenciaMotivo    String?
+  sugerenciaProveedor String?
+  createdAt           DateTime    @default(now())
+  assignedAt          DateTime?
+  completedAt         DateTime?
+
+  @@index([status])
+  @@index([repartidorId, status])
+}
+
+model OptimizationRun {
+  id           String    @id @default(uuid())
+  tipo         String
+  estado       String
+  parametros   Json
+  resumen      Json?
+  costoTotal   Float?
+  costoGreedy  Float?
+  mejoraPct    Float?
+  generaciones Int?
+  duracionMs   Int?
+  envios       Int       @default(0)
+  vehiculos    Int       @default(0)
+  creadoPor    String?
+  createdAt    DateTime  @default(now())
+  finishedAt   DateTime?
+
+  @@index([createdAt])
+}
+
+/// Proveedores de IA habilitados y su orden de consulta.
+model AiProviderConfig {
+  id        String  @id
+  nombre    String
+  formato   String
+  activo    Boolean @default(true)
+  prioridad Int
+  timeoutMs Int     @default(1500)
+}
+
+/// Retroalimentación: la IA interna aprende del desempeño real de cada medio.
+model MedioDesempeno {
+  medioId          String @id
+  entregas         Int    @default(0)
+  aTiempo          Int    @default(0)
+  tardias          Int    @default(0)
+}
+
+model Setting {
+  key       String   @id
+  value     Json
+  updatedAt DateTime @updatedAt
+}
+
+model OutboxEvent {
+  id            String    @id @default(uuid())
+  type          String
+  payload       Json
+  correlationId String?
+  createdAt     DateTime  @default(now())
+  publishedAt   DateTime?
+  attempts      Int       @default(0)
+  lastError     String?
+
+  @@index([publishedAt, createdAt])
+}
+
+model ProcessedEvent {
+  eventId     String
+  consumer    String
+  processedAt DateTime @default(now())
+
+  @@id([eventId, consumer])
+}

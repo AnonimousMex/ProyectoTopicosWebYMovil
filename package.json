@@ -1,0 +1,30 @@
+{
+  "name": "rumbo",
+  "private": true,
+  "version": "1.0.0",
+  "type": "module",
+  "description": "Rumbo — plataforma de entregas con microservicios, algoritmo genético para asignación y proveedores de IA/mapas simulados.",
+  "workspaces": [
+    "packages/*",
+    "services/*",
+    "apps/*"
+  ],
+  "scripts": {
+    "infra:up": "docker compose up -d",
+    "infra:down": "docker compose down",
+    "db:setup": "tsx scripts/setupDatabases.ts",
+    "db:seed": "tsx scripts/seedDemo.ts",
+    "setup": "npm run infra:up && npm run db:setup && npm run db:seed",
+    "dev": "tsx scripts/devAll.ts",
+    "dev:services": "tsx scripts/devAll.ts --sin-web",
+    "typecheck": "npm run typecheck -ws --if-present",
+    "test": "vitest run",
+    "build:web": "npm run build -w apps/web"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.2",
+    "tsx": "^4.19.2",
+    "typescript": "~5.9.3",
+    "vitest": "^3.2.4"
+  }
+}
